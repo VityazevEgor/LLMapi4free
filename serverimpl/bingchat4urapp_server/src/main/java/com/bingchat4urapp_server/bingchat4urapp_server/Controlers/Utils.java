@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 import com.bingchat4urapp_server.bingchat4urapp_server.Models.RequestsModels;
 import com.bingchat4urapp_server.bingchat4urapp_server.Models.TaskModel;
+import com.bingchat4urapp_server.bingchat4urapp_server.Models.TaskType;
 
 @Component
 public class Utils {
@@ -39,7 +40,7 @@ public class Utils {
         Map<String, String> promptTask = Map.of("prompt", prompt, "timeOutForAnswer", timeOutForAnswer);
 
         var newTask = new TaskModel();
-        newTask.type = 2;
+        newTask.taskType = TaskType.PROMPT;
         newTask.data = promptTask;
 
         return newTask;
@@ -48,7 +49,7 @@ public class Utils {
     public TaskModel createAuthTask(String provider){
         Map<String, String> authTask = Map.of("provider", provider);
         var newTask = new TaskModel();
-        newTask.type = 1;
+        newTask.taskType = TaskType.AUTH;
         newTask.data = authTask;
 
         return newTask;
@@ -56,7 +57,7 @@ public class Utils {
 
     public TaskModel createNewChatTask(){
         var newTask = new TaskModel();
-        newTask.type = 3;
+        newTask.taskType = TaskType.CREATE_CHAT;
         return newTask;
     }
 

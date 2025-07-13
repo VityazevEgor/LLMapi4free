@@ -23,6 +23,7 @@ import com.bingchat4urapp_server.bingchat4urapp_server.BgTasks.CommandsExecutor;
 import com.bingchat4urapp_server.bingchat4urapp_server.Models.TaskRepo;
 import com.bingchat4urapp_server.bingchat4urapp_server.Models.RequestsModels;
 import com.bingchat4urapp_server.bingchat4urapp_server.Models.TaskModel;
+import com.bingchat4urapp_server.bingchat4urapp_server.Models.TaskType;
 import jakarta.validation.Valid;
 
 @RestController
@@ -149,7 +150,7 @@ public class MainController {
     @GetMapping("/exit")
     public ResponseEntity<String> exitTask() {
         var model = new TaskModel();
-        model.type = 0;
+        model.taskType = TaskType.SHUTDOWN;
         taskRepo.save(model);
         return ResponseEntity.ok("Server will be down in few seconds");
     }

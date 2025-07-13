@@ -50,9 +50,14 @@
     <script th:src="@{~/bootstrap.bundle.min.js}"></script>
     <script th:src="@{~/stars.js}"></script>
     <script>
-        document.getElementById('promptArea').addEventListener('input', () => {
-            const text = document.getElementById('promptArea').value;
-            saveText(text);
+        document.getElementById('promptArea').addEventListener('input', (event) => {
+            const text = event.target.value;
+            const lastChar = text.charAt(text.length - 1);
+            
+            // Сохраняем только когда пользователь вводит пробел (завершает слово)
+            if (lastChar === ' ') {
+                saveText(text);
+            }
         });
 
         function saveText(text) {

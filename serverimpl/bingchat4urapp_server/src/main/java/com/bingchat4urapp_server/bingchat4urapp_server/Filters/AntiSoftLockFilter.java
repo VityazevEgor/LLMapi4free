@@ -15,23 +15,16 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 @Component
-public class AuthFilter extends OncePerRequestFilter {
+public class AntiSoftLockFilter extends OncePerRequestFilter {
     @Autowired
     CommandsExecutor executor;
 
-    private final Logger logger = LoggerFactory.getLogger(AuthFilter.class);
+    private final Logger logger = LoggerFactory.getLogger(AntiSoftLockFilter.class);
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         antiSoftLock();
-        if (executor.getWrapper().getWorkingLLM().isPresent()){
-            filterChain.doFilter(request, response);
-            logger.info("Passed request");
-        }
-        else{
-            logger.info("Request filtered cuz there is no working LLM");
-            response.sendRedirect("/auth");
-        }
+        filterChain.doFilter(request, response);
     }
 
     // to avoid situation when all providers in error state

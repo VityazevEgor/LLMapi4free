@@ -16,6 +16,7 @@ import com.bingchat4urapp_server.bingchat4urapp_server.BgTasks.CommandsExecutor;
 import com.bingchat4urapp_server.bingchat4urapp_server.Models.TaskRepo;
 import com.bingchat4urapp_server.bingchat4urapp_server.Models.PromptCacheRepo;
 import com.bingchat4urapp_server.bingchat4urapp_server.Models.TaskModel;
+import com.bingchat4urapp_server.bingchat4urapp_server.Models.TaskType;
 import com.vityazev_egor.Wrapper.LLMproviders;
 
 @Controller
@@ -81,9 +82,6 @@ public class GUIController {
 
     @PostMapping("/send")
     public String sendPrompt(@RequestParam String prompt){
-        // if (Shared.examMode){
-        //     prompt = prompt;
-        // }
         var newTask = utils.createPromptTask(prompt, "120");
         context.save(newTask);
         return "redirect:/task/" + newTask.id;
@@ -94,8 +92,8 @@ public class GUIController {
     public ModelAndView waitTask(@PathVariable("taskid") Integer taskId) {
         var taskModel = context.findById(taskId).orElse(null);
 
-        // если авторизация или создание чата прошло успешна то сразу редериктим на страницу для отправки запросов
-        if ((taskModel.type == 1 || taskModel.type == 3) && !taskModel.gotError && taskModel.isFinished){
+        // если авторизация или создание чата прошло успешна, то сразу редериктим на страницу для отправки запросов
+        if ((taskModel.taskType == TaskType.AUTH || taskModel.taskType == TaskType.CREATE_CHAT) && !taskModel.gotError && taskModel.isFinished){
             return new ModelAndView("redirect:/");
         }
 

@@ -16,6 +16,9 @@ import org.springframework.stereotype.Component;
 import com.bingchat4urapp_server.bingchat4urapp_server.Shared;
 import com.bingchat4urapp_server.bingchat4urapp_server.Models.TaskRepo;
 import com.bingchat4urapp_server.bingchat4urapp_server.Models.TaskModel;
+import com.bingchat4urapp_server.bingchat4urapp_server.Models.TaskType;
+import com.bingchat4urapp_server.bingchat4urapp_server.Models.TaskData;
+import com.bingchat4urapp_server.bingchat4urapp_server.Models.TaskResult;
 import com.vityazev_egor.Wrapper;
 import com.vityazev_egor.Wrapper.LLMproviders;
 import com.vityazev_egor.Wrapper.WrapperMode;
@@ -28,7 +31,7 @@ import lombok.Getter;
 public class CommandsExecutor {
     @Getter
     private Wrapper wrapper;
-    private Boolean doJob = true;
+    private boolean doJob = true;
     private final Logger logger = LoggerFactory.getLogger(CommandsExecutor.class);
     private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
     
@@ -51,128 +54,138 @@ public class CommandsExecutor {
         }
     }
 
-    // 0 - завершение работы
-    // 1 - авторизация
-    // 2 - вопрос
-    // 3 - создание чата
-    private class commandsProcessor implements Runnable {
+    private static class CommandsProcessor implements Runnable {
+        private final Wrapper wrapper;
+        private final TaskRepo context;
+        private final Logger logger;
+
+        public CommandsProcessor(Wrapper wrapper, TaskRepo context, Logger logger) {
+            this.wrapper = wrapper;
+            this.context = context;
+            this.logger = logger;
+        }
 
         @Override
         public void run() {
-            if (!doJob) return;
             TaskModel task = context.findFirstUnfinishedTask();
-            if (task == null)
-                return;
-            logger.info("I got task to do with this data = {}", task.data);
-            try{
-                if (task.type == 0){
-                    System.exit(0);
-                    return;
+            if (task == null) return;
+            
+            logger.info("Processing task of type: {}", task.taskType);
+            
+            try {
+                TaskResult result = switch (task.taskType) {
+                    case SHUTDOWN -> {
+                        logger.info("Shutting down application");
+                        System.exit(0);
+                        yield null;
+                    }
+                    case AUTH -> processAuthTask(task);
+                    case PROMPT -> processPromptTask(task);
+                    case CREATE_CHAT -> processCreateChatTask(task);
+                };
+                
+                if (result != null) {
+                    task.applyResult(result);
+                    context.save(task);
                 }
-                if (task.data.isEmpty() && task.type != 3){
-                    gotError(task, "There is not data for task");
-                    return;
-                }
-                switch (task.type) {
-                    case 1:
-                        processAuthTask(task);
-                        break;
-                    case 2:
-                        processPromptTask(task);
-                        break;
-                    case 3:
-                        processСreateChatTask(task);
-                        break;
-                    default:
-                        gotError(task, "Got task with unknow type");
-                        break;
-                }
-            } catch (Exception ex){
-                logger.error("Error in main loop", ex);
-                gotError(task, "Internal error");
+            } catch (Exception ex) {
+                logger.error("Error processing task", ex);
+                task.applyResult(new TaskResult.Failure("Internal error", ex));
+                context.save(task);
             }
         }
-            
+
+        private TaskResult processCreateChatTask(TaskModel task) {
+            logger.info("Processing create chat task");
+            try {
+                var typedData = (TaskData.CreateChatData) task.getTypedData();
+                
+                return wrapper.getWorkingLLM()
+                    .map(workingLLM -> {
+                        boolean result = wrapper.createChat(workingLLM.getProvider());
+                        logger.info("Create chat task completed with result: {}", result);
+                        return result ? new TaskResult.Success() : new TaskResult.Failure("Failed to create chat");
+                    })
+                    .orElse(new TaskResult.Failure("No working LLM available"));
+            } catch (Exception e) {
+                logger.error("Error in create chat task", e);
+                return new TaskResult.Failure("Error creating chat", e);
+            }
+        }
+
+        private TaskResult processAuthTask(TaskModel task) {
+            logger.info("Processing auth task");
+            try {
+                var typedData = (TaskData.AuthData) task.getTypedData();
+                boolean result = wrapper.auth(typedData.provider());
+                logger.info("Auth task completed for provider {} with result: {}", typedData.provider(), result);
+                return result ? new TaskResult.Success() : new TaskResult.Failure("Authentication failed");
+            } catch (Exception e) {
+                logger.error("Error in auth task", e);
+                return new TaskResult.Failure("Authentication error", e);
+            }
+        }
+
+        private TaskResult processPromptTask(TaskModel task) {
+            logger.info("Processing prompt task");
+            try {
+                var typedData = (TaskData.PromptData) task.getTypedData();
+                var chatAnswer = wrapper.askLLM(typedData.prompt(), typedData.timeoutForAnswer());
+                
+                if (chatAnswer.getCleanAnswer().isEmpty()) {
+                    return new TaskResult.Failure("No answer received from LLM");
+                }
+                
+                String imageName = null;
+                if (chatAnswer.getAnswerImage().isPresent()) {
+                    try {
+                        imageName = UUID.randomUUID() + ".png";
+                        ImageIO.write(chatAnswer.getAnswerImage().get(), "png", 
+                                    Paths.get(Shared.imagesPath.toString(), imageName).toFile());
+                    } catch (IOException ex) {
+                        logger.warn("Failed to save answer image, continuing without image", ex);
+                    }
+                }
+                
+                logger.info("Prompt task completed successfully");
+                return new TaskResult.Success(
+                    chatAnswer.getCleanAnswer().get(),
+                    chatAnswer.getHtmlAnswer().orElse(null),
+                    imageName
+                );
+            } catch (Exception e) {
+                logger.error("Error in prompt task", e);
+                return new TaskResult.Failure("Error processing prompt", e);
+            }
+        }
     }
 
     @PostConstruct
     public void startTask(){
-        scheduledExecutorService.scheduleWithFixedDelay(
-            new commandsProcessor(), 
-            2, 
-            2, 
-            TimeUnit.SECONDS
-        );
+        if (doJob) {
+            scheduledExecutorService.scheduleWithFixedDelay(
+                new CommandsProcessor(wrapper, context, logger), 
+                2, 
+                2, 
+                TimeUnit.SECONDS
+            );
+        }
     }
 
     @PreDestroy
-    public void stopTask(){
+    public void stopTask() {
+        doJob = false;
         scheduledExecutorService.shutdown();
+        try {
+            if (!scheduledExecutorService.awaitTermination(5, TimeUnit.SECONDS)) {
+                scheduledExecutorService.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            scheduledExecutorService.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
         wrapper.exit();
     }
 
-    private void processСreateChatTask(TaskModel task){
-        logger.info("Got create chat task");
-        wrapper.getWorkingLLM().ifPresentOrElse(workingLLM -> {
-            Boolean result = wrapper.createChat(workingLLM.getProvider());
-            task.isFinished = true;
-            task.gotError = !result;
-            context.save(task);
-        }, ()-> gotError(task, "No working LLM"));
-        logger.info("Finished create chat task");
-    }
-
-    private void processAuthTask(TaskModel task) {
-        logger.info("Got auth task");
-        Boolean result = false;
-        try{
-            LLMproviders provider = LLMproviders.valueOf(task.data.get("provider"));
-            result = wrapper.auth(provider);
-        }
-        catch (Exception ex){
-            logger.error("Got error in auth task", ex);
-        }
-        task.isFinished = true;
-        task.gotError = !result;
-        context.save(task);
-        logger.info("Finished auth task");
-    }
-
-    private void processPromptTask(TaskModel task) {
-        logger.info("Got prompt task");
-        String prompt = task.data.get("prompt");
-        Integer timeOutForAnswer = Integer.parseInt(task.data.get("timeOutForAnswer"));
-        try{
-            // var chatAnswer = chat.askLLM(prompt, timeOutForAnswer);
-            var chatAnswer = wrapper.askLLM(prompt, timeOutForAnswer);
-            task.isFinished = true;
-            task.gotError = chatAnswer.getCleanAnswer().isEmpty();
-            task.result = chatAnswer.getCleanAnswer().isPresent() ? chatAnswer.getCleanAnswer().get() : null;
-            task.htmlResult = chatAnswer.getHtmlAnswer().isPresent() ? chatAnswer.getHtmlAnswer().get() : null;
-
-            // save answer image
-            if (chatAnswer.getAnswerImage().isPresent()){
-                String imageName = UUID.randomUUID() +".png";
-                ImageIO.write(chatAnswer.getAnswerImage().get(), "png", Paths.get(Shared.imagesPath.toString(), imageName).toFile());
-                task.imageResult = imageName;
-            }
-        } catch (IOException ex){
-            logger.error("Can't save image of answer, but i ignore it, i still will save answer from AI", ex);
-        }
-        catch (Exception ex){
-            logger.error("Got unexpected error in prompt task", ex);
-            task.isFinished = true;
-            task.gotError = true;
-        }
-        context.save(task);
-        logger.info("Finished prompt task");
-    }
-
-    private void gotError(TaskModel task, String reason){
-        task.isFinished = true;
-        task.gotError = true;
-        task.result = reason;
-        context.save(task);
-        logger.error(reason);
-    } 
+ 
 }

@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import com.bingchat4urapp_server.bingchat4urapp_server.Controlers.Utils;
 import com.bingchat4urapp_server.bingchat4urapp_server.Models.TaskRepo;
 import com.bingchat4urapp_server.bingchat4urapp_server.Models.TaskModel;
+import com.bingchat4urapp_server.bingchat4urapp_server.Models.TaskType;
 
 @Component
 public class ForTesting implements CommandLineRunner{
@@ -26,7 +27,7 @@ public class ForTesting implements CommandLineRunner{
                 model.result = String.format("Task #%s", String.valueOf(i));
                 model.gotError = false;
                 model.isFinished = true;
-                model.type = 2;
+                model.taskType = TaskType.PROMPT;
 
                 context.save(model);
             }
@@ -34,7 +35,7 @@ public class ForTesting implements CommandLineRunner{
             var model = new TaskModel();
             model.result = utils.readFile("forTest/answerWithMath.txt");
             model.htmlResult = utils.readFile("forTest/answerWithMath.html");
-            model.type = 2;
+            model.taskType = TaskType.PROMPT;
             model.isFinished = true;
             model.gotError = false;
             context.save(model);

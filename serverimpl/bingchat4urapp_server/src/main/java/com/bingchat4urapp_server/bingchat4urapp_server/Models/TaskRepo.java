@@ -8,17 +8,27 @@ public interface TaskRepo extends JpaRepository<TaskModel, Integer> {
     @Query("SELECT t FROM TaskModel t WHERE t.isFinished = false ORDER BY t.id ASC LIMIT 1")
     TaskModel findFirstUnfinishedTask();
 
-    // get last TaskModel where field 'type' == 1
-    @Query("SELECT t FROM TaskModel t WHERE t.type = 1 ORDER BY t.id DESC LIMIT 1")
-    TaskModel findLastAuthTask();
+    @Query("SELECT t FROM TaskModel t WHERE t.taskType = :taskType ORDER BY t.id DESC LIMIT 1")
+    TaskModel findLastTaskByType(TaskType taskType);
 
-    // get firt TaskModel where field  'type' == 3 (It's means that chat was created)
-    @Query("SELECT t FROM TaskModel t WHERE t.type = 3 ORDER BY t.id ASC LIMIT 1")
-    TaskModel findCreateChatTask();
+    @Query("SELECT t FROM TaskModel t WHERE t.taskType = :taskType ORDER BY t.id ASC LIMIT 1")
+    TaskModel findFirstTaskByType(TaskType taskType);
 
     @Query("SELECT t FROM TaskModel t WHERE t.isFinished = true ORDER BY t.id DESC LIMIT 1")
     TaskModel findLastFinishedTask();
 
-    @Query("SELECT t FROM TaskModel t WHERE t.isFinished = true AND t.gotError = false AND t.type = 2 ORDER BY t.id DESC LIMIT 5")
-    List<TaskModel> findLatestFinishedPromptTasks();
+    @Query("SELECT t FROM TaskModel t WHERE t.isFinished = true AND t.gotError = false AND t.taskType = :taskType ORDER BY t.id DESC LIMIT :limit")
+    List<TaskModel> findLatestFinishedTasksByType(TaskType taskType, int limit);
+
+    default TaskModel findLastAuthTask() {
+        return findLastTaskByType(TaskType.AUTH);
+    }
+
+    default TaskModel findCreateChatTask() {
+        return findFirstTaskByType(TaskType.CREATE_CHAT);
+    }
+
+    default List<TaskModel> findLatestFinishedPromptTasks() {
+        return findLatestFinishedTasksByType(TaskType.PROMPT, 5);
+    }
 }

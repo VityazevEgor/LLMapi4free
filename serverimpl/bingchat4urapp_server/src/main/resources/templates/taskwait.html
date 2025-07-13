@@ -48,7 +48,7 @@
 
             <div th:if="${not currentTask.isFinished}" class="task-progress double-border">
               <h1>Task is still in progress</h1>
-              <p th:text="'Type: ' + ${currentTask.type}"></p>
+              <p th:text="'Type: ' + ${currentTask.taskType.description}"></p>
             </div>
         
             <div th:if="${currentTask.isFinished and currentTask.gotError}">
