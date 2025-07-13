@@ -59,7 +59,14 @@ public class Gemini implements iChat {
 
     @Override
     public Boolean createNewChat() {
-        return driver.getNavigation().loadUrlAndWait(url, 10) && textField.isExists();
+        try {
+            driver.getNavigation().loadUrlAndWait(url, 10);
+            textField.waitToAppear(5, 400);
+            return true;
+        } catch (Exception ex){
+            logger.error("Can't find text field: ", ex);
+            return false;
+        }
     }
 
     @Override

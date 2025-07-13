@@ -25,7 +25,7 @@ public class OpenAI implements iChat{
      * @return TRUE if the user is logged in, FALSE otherwise
      */
     private Boolean isLoggedIn() {
-        var profileImage = driver.findElement(By.className("rounded-xs"));
+        var profileImage = driver.findElement(By.cssSelector("img[alt='Profile image']"));
         return Shared.waitForElements(false, 10, profileImage);
     }
 

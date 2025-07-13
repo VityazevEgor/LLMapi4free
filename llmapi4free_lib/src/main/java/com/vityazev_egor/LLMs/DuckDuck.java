@@ -67,7 +67,7 @@ public class DuckDuck implements iChat{
             // GET ANSWER
             if (!Shared.waitForAnswer(driver, timeOutForAnswer, 2000))
                 throw new Exception("Time out while waiting for duck duck answer");
-            var answerBlocks = driver.findElements(By.cssSelector("." + answerDivClass));
+            var answerBlocks = driver.findElements(By.cssSelector(buildCssSelector(answerDivClass)));
             if (answerBlocks.isEmpty())
                 throw new Exception("Could not find answer div");
             var latestAnswer = answerBlocks.getLast();
@@ -116,6 +116,23 @@ public class DuckDuck implements iChat{
             logger.error("Error occurred while sending message: " + ex.getMessage(), ex);
             return false;
         }
+    }
+
+    private String buildCssSelector(String classNames) {
+        if (classNames == null || classNames.trim().isEmpty()) {
+            return "";
+        }
+        
+        String[] classes = classNames.trim().split("\\s+");
+        StringBuilder selector = new StringBuilder();
+        
+        for (String className : classes) {
+            if (!className.isEmpty()) {
+                selector.append(".").append(className);
+            }
+        }
+        
+        return selector.toString();
     }
 
     @Override
