@@ -28,7 +28,7 @@ public class DuckDuck implements iChat{
                 throw new Exception("Could not load DuckDuckGo chat in time.");
 
             var promptInput = driver.findElement(By.name("user-prompt"));
-            if (promptInput.isExists())
+            if (Shared.waitForElements(false, 2, promptInput))
                 return true;
 
             var getStartedButton = driver.findElement(By.cssSelector("button[type='button'][tabindex='1']"));
