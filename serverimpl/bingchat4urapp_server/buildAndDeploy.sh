@@ -11,7 +11,7 @@ if [ $? -eq 0 ]; then
   
   # Define variables
   JAR_FILE=$(ls target/*.jar | head -n 1)  # Get the first .jar file in the target directory
-  SERVER_USER="root"
+  SERVER_USER="egor"
   SERVER_IP="5.182.86.164"
   DESTINATION_PATH="/home/egor/Downloads"  # Destination path on the server
 

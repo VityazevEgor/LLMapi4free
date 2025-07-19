@@ -42,7 +42,9 @@ class ApplicationTest {
         wrapper = createWrapper(LLMproviders.DuckDuck, WrapperMode.Normal);
         var answer = wrapper.askLLM("How are you today?",40);
         assertTrue(answer.getCleanAnswer().isPresent());
+        System.out.println(answer.getCleanAnswer().get());
         answer = wrapper.askLLM("Write hello world in java", 40);
+        System.out.println(answer.getCleanAnswer().get());
         assertTrue(answer.getCleanAnswer().isPresent());
     }
 
