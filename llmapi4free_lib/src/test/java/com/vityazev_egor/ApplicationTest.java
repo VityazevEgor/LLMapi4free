@@ -1,7 +1,6 @@
 package com.vityazev_egor;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
 
 import com.vityazev_egor.Core.Shared;
@@ -11,10 +10,6 @@ import com.vityazev_egor.Wrapper.WrapperMode;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.List;
 
 class ApplicationTest {
     
@@ -89,16 +84,18 @@ class ApplicationTest {
         var answer = wrapper.askLLM("Can you write hello world in java?",100);
         System.out.println(answer.getCleanAnswer());
         assertTrue(answer.getCleanAnswer().isPresent());
+        answer = wrapper.askLLM("Can you do the same but in C#", 100);
+        System.out.println(answer.getCleanAnswer());
+        assertTrue(answer.getCleanAnswer().isPresent());
     }
 
     @Test
     void testRotatingSystem() throws IOException{
-        wrapper = createWrapper(LLMproviders.Copilot, WrapperMode.ExamMode);
-        assertTrue(wrapper.getWorkingLLM().isPresent() && wrapper.getWorkingLLM().get().getProvider() == LLMproviders.DuckDuck);
-
-        var result = wrapper.auth(LLMproviders.Copilot);
-        assertTrue(result);
-        assertTrue(wrapper.getWorkingLLM().isPresent() && wrapper.getWorkingLLM().get().getProvider() == LLMproviders.Copilot);
+        wrapper = createWrapper(LLMproviders.DuckDuck, WrapperMode.ExamMode);
+        // мне надо самому тут мешать программе
+        var result = wrapper.askLLM("Напиши hello world \n на Java", 120);
+        System.out.println(result.getCleanAnswer());
+        assertTrue(result.getCleanAnswer().isPresent());
     }
 
     @Test

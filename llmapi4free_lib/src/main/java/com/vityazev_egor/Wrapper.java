@@ -52,9 +52,9 @@ public class Wrapper {
         this.driver.getXdo().calibrate();
         this.llms = Arrays.asList(
             new LLM(new OpenAI(driver),false, LLMproviders.OpenAI),
+            new LLM(new Gemini(driver), false, LLMproviders.Gemini),
             new LLM(new DuckDuck(driver),false, LLMproviders.DuckDuck),
-            new LLM(new DeepSeek(driver), false, LLMproviders.DeepSeek),
-            new LLM(new Gemini(driver), false, LLMproviders.Gemini)
+            new LLM(new DeepSeek(driver), false, LLMproviders.DeepSeek)
         );
         this.preferredProvider = preferredProvider;
         this.wrapperMode = wrapperMode;

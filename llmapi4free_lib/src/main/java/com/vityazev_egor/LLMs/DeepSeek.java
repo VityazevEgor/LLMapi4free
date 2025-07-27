@@ -49,23 +49,28 @@ public class DeepSeek implements iChat{
 
             var signInWithGoogleButton = driver.findElement(By.cssSelector("div.ds-button__icon"));
             signInWithGoogleButton.waitToAppear(5, 100);
-            driver.getInput().emulateClick(signInWithGoogleButton);
+            for (int i=0; i<3; i++)
+                driver.getInput().emulateClick(signInWithGoogleButton);
+
             String previousTitle = driver.getTitle().orElseThrow(() -> new Exception("Can't get title"));
             if (!new LambdaWaitTask(() -> driver.getTitle().map(title -> !title.equalsIgnoreCase(previousTitle)).orElse(false)).execute(10, 200))
                 throw new Exception("Could not load Google sign in page in time");
+            driver.getNavigation().waitFullLoad(10);
 
             if (!driver.getNavigation().loadUrlAndBypassCFXDO(null, null, 20))
                 throw new Exception("Could not load URL or bypass CF challenge.");
 
             var selectGoogleAccountButton = driver.findElement(By.cssSelector("[data-email]"));
             selectGoogleAccountButton.waitToAppear(5, 100);
-            driver.getInput().emulateClick(selectGoogleAccountButton);
+            for (int i=0; i<3; i++)
+                driver.getInput().emulateClick(selectGoogleAccountButton);
 
             driver.findElement(By.cssSelector("button[data-idom-class]")).waitToAppear(5, 200);
             var declineAcceptButtons = driver.findElements(By.cssSelector("button[data-idom-class]"));
             if (declineAcceptButtons.isEmpty())
                 throw new com.vityazev_egor.LLMs.Shared.ProviderException("Can't find decline and accept buttons");
-            driver.getInput().emulateClick(declineAcceptButtons.get(1));
+            for (int i=0; i<3; i++)
+                driver.getInput().emulateClick(declineAcceptButtons.get(1));
             Shared.sleep(1000);
             driver.getNavigation().waitFullLoad(5);
 
@@ -93,7 +98,7 @@ public class DeepSeek implements iChat{
                     throw new Exception("Could not open chat or authenticate.");
 
             if (!bypassCustomCF())
-                throw new RuntimeException("Can't bypass custom CF challenge");
+                throw new Exception("Can't bypass custom CF challenge");
 
             // SEND PROMPT
             var chatInput = driver.findElement(By.id("chat-input"));
@@ -105,10 +110,10 @@ public class DeepSeek implements iChat{
 
             // GET ANSWER
             if (!com.vityazev_egor.LLMs.Shared.waitForAnswer(driver, timeOutForAnswer, 5000))
-                throw new RuntimeException("Could not receive answer within the specified time limit.");
+                throw new Exception("Could not receive answer within the specified time limit.");
             var answerDivs = driver.findElements(By.cssSelector("div.ds-markdown.ds-markdown--block"));
             if (answerDivs.isEmpty())
-                throw new RuntimeException("No answer received.");
+                throw new Exception("No answer received.");
             var lastestAnswer = answerDivs.getLast();
             return new ChatAnswer(
                 lastestAnswer.getText(),
