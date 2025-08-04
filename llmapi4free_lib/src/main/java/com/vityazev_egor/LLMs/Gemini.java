@@ -12,6 +12,7 @@ import com.vityazev_egor.iChat;
 public class Gemini implements iChat {
     private final NoDriver driver;
     private final String url = "https://gemini.google.com/app";
+    private final String codeBlockBannerStyle = ".code-block-decoration.header-formatted.gds-title-s";
     private final CustomLogger logger = new CustomLogger(Gemini.class.getName());
     private final WebElement textField, sendButton;
 
@@ -41,6 +42,9 @@ public class Gemini implements iChat {
             if (!com.vityazev_egor.LLMs.Shared.waitForAnswer(driver, timeOutForAnswer, 200))
                 throw new Exception("Timeout for answer");
 
+            int countCodeBlockBannersCount = driver.findElements(By.cssSelector(codeBlockBannerStyle)).size();
+            for (int i=0; i<countCodeBlockBannersCount; i++)
+                driver.findElement(By.cssSelector(codeBlockBannerStyle)).removeFromDOM();
             var answerElements = driver.findElements(By.cssSelector("message-content.model-response-text"));
             if (answerElements.isEmpty())
                 throw new Exception("No answer found");

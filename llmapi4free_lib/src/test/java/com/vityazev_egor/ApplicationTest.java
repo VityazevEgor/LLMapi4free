@@ -81,7 +81,7 @@ class ApplicationTest {
     void testOpenAIChat() throws IOException{
         wrapper = createWrapper(LLMproviders.OpenAI, WrapperMode.Normal);
         wrapper.auth(LLMproviders.OpenAI);
-        var answer = wrapper.askLLM("Can you write hello world in java?",100);
+        var answer = wrapper.askLLM("Can you write hello world in java? Do not use artifacts or canvas!",100);
         System.out.println(answer.getCleanAnswer());
         assertTrue(answer.getCleanAnswer().isPresent());
         answer = wrapper.askLLM("Can you do the same but in C#", 100);

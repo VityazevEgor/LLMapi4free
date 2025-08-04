@@ -4,6 +4,7 @@ import com.vityazev_egor.Core.CustomLogger;
 import com.vityazev_egor.Core.Shared;
 import com.vityazev_egor.Core.WebElements.By;
 import com.vityazev_egor.Core.LambdaWaitTask;
+import com.vityazev_egor.Core.WebElements.WebElement;
 import com.vityazev_egor.NoDriver;
 import com.vityazev_egor.iChat;
 import com.vityazev_egor.Models.ChatAnswer;
@@ -111,6 +112,10 @@ public class DeepSeek implements iChat{
             // GET ANSWER
             if (!com.vityazev_egor.LLMs.Shared.waitForAnswer(driver, timeOutForAnswer, 5000))
                 throw new Exception("Could not receive answer within the specified time limit.");
+            int codeBlockBannersCount = driver.findElements(By.className("md-code-block-banner-wrap")).size();
+            logger.info(String.format("Found %d code block banners to remove", codeBlockBannersCount));
+            for (int i=0; i<codeBlockBannersCount; i++)
+                driver.findElement(By.className("md-code-block-banner-wrap")).removeFromDOM();
             var answerDivs = driver.findElements(By.cssSelector("div.ds-markdown.ds-markdown--block"));
             if (answerDivs.isEmpty())
                 throw new Exception("No answer received.");

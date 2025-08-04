@@ -3,6 +3,7 @@ package com.vityazev_egor.LLMs;
 import com.vityazev_egor.Core.CustomLogger;
 import com.vityazev_egor.Core.LambdaWaitTask;
 import com.vityazev_egor.Core.WebElements.By;
+import com.vityazev_egor.Core.WebElements.WebElement;
 import com.vityazev_egor.NoDriver;
 import com.vityazev_egor.iChat;
 import com.vityazev_egor.Models.ChatAnswer;
@@ -13,6 +14,10 @@ public class OpenAI implements iChat{
 
     public static final String url = "https://chatgpt.com/";
     private final CustomLogger logger = new CustomLogger(OpenAI.class.getName());
+    private final java.util.List<String> codeBlockBannerStyles = java.util.List.of(
+                ".flex.items-center.text-token-text-secondary.px-4.py-2.text-xs.font-sans.justify-between.h-9.bg-token-sidebar-surface-primary.select-none.rounded-t-2xl",
+                ".absolute.end-0.bottom-0.flex.h-9.items-center.pe-2"
+            );
 
     private final NoDriver driver;
     public OpenAI(NoDriver driver) {
@@ -88,6 +93,12 @@ public class OpenAI implements iChat{
             // WAIT FOR ANSWER AND GET TEXT, HTML AND IMAGE OF IT
             if (!Shared.waitForAnswer(driver, timeOutForAnswer, 2000))
                 throw new Exception("Can't get answer from AI in time");
+            codeBlockBannerStyles.forEach(style->{
+                int codeBlockBannersCount = driver.findElements(By.cssSelector(style)).size();
+                logger.info(String.format("Found %d block to remove", codeBlockBannersCount));
+                for (int i=0; i<codeBlockBannersCount; i++)
+                    driver.findElement(By.cssSelector(style)).removeFromDOM();
+            });
             var answerBlocks = driver.findElements(By.cssSelector("div[data-message-author-role='assistant']"));
             if (answerBlocks.isEmpty())
                 throw new Exception("Could not get answer from OpenAI");
