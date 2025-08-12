@@ -102,16 +102,33 @@ public class DeepSeek implements iChat{
                 throw new Exception("Can't bypass custom CF challenge");
 
             // SEND PROMPT
+            boolean isPromptSent = false;
             var chatInput = driver.findElement(By.id("chat-input"));
             var sendButton = driver.findElement(By.cssSelector("div[role='button'][aria-disabled='false']"));
-            chatInput.waitToAppear(5, 100);
-            driver.getInput().insertText(chatInput, prompt);
-            sendButton.waitToAppear(5, 100);
-            driver.getInput().emulateClick(sendButton);
+            var disabledSendButton = driver.findElement(By.cssSelector("div[role='button'][aria-disabled='true']"));
+            disabledSendButton.waitToAppear(10, 100);
+            final String disabledButtonHtml = disabledSendButton.getHTMLContent().orElseThrow(() -> new Exception("Can't get html of disabled button"));
+            for (int i=0; i<3; i++) {
+                try {
+                    chatInput.waitToAppear(5, 100);
+                    driver.getInput().insertText(chatInput, prompt);
+                    sendButton.waitToAppear(5, 100);
+                    driver.getInput().emulateClick(sendButton);
+                    disabledSendButton.waitToAppear(10, 100);
+                    isPromptSent = true;
+                    break;
+                } catch (Exception ex){
+                    logger.warning("Could not send prompt on iteration #" + i);
+                    driver.getCurrentUrl().ifPresent(url -> driver.getNavigation().loadUrlAndWait(url, 10));
+                }
+            }
+            if (!isPromptSent)
+                throw new Exception("Could not send prompt");
 
             // GET ANSWER
-            if (!com.vityazev_egor.LLMs.Shared.waitForAnswer(driver, timeOutForAnswer, 5000))
-                throw new Exception("Could not receive answer within the specified time limit.");
+            var waitForDisabledButton = new LambdaWaitTask(() -> disabledSendButton.getHTMLContent().map(html -> html.equals(disabledButtonHtml)).orElse(false));
+            if (!waitForDisabledButton.execute(timeOutForAnswer, 100))
+                throw new Exception("Timeout for answer");
             int codeBlockBannersCount = driver.findElements(By.className("md-code-block-banner-wrap")).size();
             logger.info(String.format("Found %d code block banners to remove", codeBlockBannersCount));
             for (int i=0; i<codeBlockBannersCount; i++)

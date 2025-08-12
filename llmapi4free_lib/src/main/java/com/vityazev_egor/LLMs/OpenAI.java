@@ -83,15 +83,31 @@ public class OpenAI implements iChat{
             }
 
             // SEND PROMPT
+            boolean isPromptSent = false;
             var input = driver.findElement(By.id("prompt-textarea"));
-            input.waitToAppear(5, 100);
-            driver.getInput().insertText(input, prompt);
-            var sendButton = driver.findElement(By.id("composer-submit-button"));
-            sendButton.waitToAppear(5, 100);
-            driver.getInput().emulateClick(sendButton);
+            var stopResponseButton = driver.findElement(By.cssSelector("button[data-testid='stop-button']"));
+            var sendButton = driver.findElement(By.cssSelector("button[data-testid='send-button']:not([disabled]"));
+            for (int i=0; i<3; i++) {
+                try {
+                    input.waitToAppear(5, 100);
+                    driver.getInput().insertText(input, prompt);
+                    sendButton.waitToAppear(5, 100);
+                    driver.getInput().emulateClick(sendButton);
+                    stopResponseButton.waitToAppear(5, 100);
+                    isPromptSent = true;
+                    break;
+                }
+                catch (Exception ex){
+                    logger.warning("Could not send prompt on iteration #" + i);
+                    driver.getCurrentUrl().ifPresent(url -> driver.getNavigation().loadUrlAndWait(url, 10));
+                }
+            }
+            if (!isPromptSent)
+                throw new Exception("Can't send prompt");
 
             // WAIT FOR ANSWER AND GET TEXT, HTML AND IMAGE OF IT
-            if (!Shared.waitForAnswer(driver, timeOutForAnswer, 2000))
+            var waitForStopButtonToHide = new LambdaWaitTask(() -> !stopResponseButton.isExists());
+            if (!waitForStopButtonToHide.execute(timeOutForAnswer, 100))
                 throw new Exception("Can't get answer from AI in time");
             codeBlockBannerStyles.forEach(style->{
                 int codeBlockBannersCount = driver.findElements(By.cssSelector(style)).size();

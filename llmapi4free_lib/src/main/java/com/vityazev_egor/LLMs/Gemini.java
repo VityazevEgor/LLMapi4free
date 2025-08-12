@@ -1,6 +1,7 @@
 package com.vityazev_egor.LLMs;
 
 import com.vityazev_egor.Core.CustomLogger;
+import com.vityazev_egor.Core.LambdaWaitTask;
 import com.vityazev_egor.Core.Shared;
 import com.vityazev_egor.Core.WebElements.By;
 import com.vityazev_egor.Core.WebElements.WebElement;
@@ -12,14 +13,14 @@ import com.vityazev_egor.iChat;
 public class Gemini implements iChat {
     private final NoDriver driver;
     private final String url = "https://gemini.google.com/app";
-    private final String codeBlockBannerStyle = ".code-block-decoration.header-formatted.gds-title-s";
     private final CustomLogger logger = new CustomLogger(Gemini.class.getName());
-    private final WebElement textField, sendButton;
+    private final WebElement textField, sendButton, stopResponseIcon;
 
     public Gemini(NoDriver driver){
         this.driver = driver;
         textField = driver.findElement(By.cssSelector(".ql-editor.ql-blank.textarea[role='textbox']"));
         sendButton = driver.findElement(By.cssSelector(".send-button-icon"));
+        stopResponseIcon = driver.findElement(By.cssSelector("mat-icon[data-mat-icon-name='stop']"));
     }
 
     @Override
@@ -35,13 +36,28 @@ public class Gemini implements iChat {
             if (!auth())
                 throw new Exception("Could not open chat");
 
-            driver.getInput().insertText(textField, prompt);
-            Shared.sleep(500);
-            sendButton.waitToAppear(2, 200);
-            driver.getInput().emulateClick(sendButton);
-            if (!com.vityazev_egor.LLMs.Shared.waitForAnswer(driver, timeOutForAnswer, 200))
+            boolean isPromptSent = false;
+            for (int i=0; i<3; i++) {
+                try {
+                    textField.waitToAppear(5, 100);
+                    driver.getInput().insertText(textField, prompt);
+                    sendButton.waitToAppear(5, 100);
+                    driver.getInput().emulateClick(sendButton);
+                    stopResponseIcon.waitToAppear(5, 100);
+                    isPromptSent = true;
+                    break;
+                } catch (Exception ex){
+                    logger.warning("Could not send prompt on iteration #" + i);
+                    driver.getCurrentUrl().ifPresent(url -> driver.getNavigation().loadUrlAndWait(url, 10));
+                }
+            }
+            if (!isPromptSent)
+                throw new Exception("Can't send prompt");
+            var waitForResponse = new LambdaWaitTask(() -> !stopResponseIcon.isExists());
+            if (!waitForResponse.execute(timeOutForAnswer, 100))
                 throw new Exception("Timeout for answer");
 
+            final String codeBlockBannerStyle = ".code-block-decoration.header-formatted.gds-title-s";
             int countCodeBlockBannersCount = driver.findElements(By.cssSelector(codeBlockBannerStyle)).size();
             for (int i=0; i<countCodeBlockBannersCount; i++)
                 driver.findElement(By.cssSelector(codeBlockBannerStyle)).removeFromDOM();
